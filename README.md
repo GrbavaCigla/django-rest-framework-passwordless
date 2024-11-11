@@ -1,6 +1,8 @@
 ![splash-image]
 ![ci-image]
 
+> __NOTE: This is a fork that aims to make this library production ready. I am reviewing code from the community and implementing some features myself to speed up the development. If you want to help, please make an issue or a pull request.__
+
 drfpasswordless is a quick way to integrate ‘passwordless’ auth into
 your Django Rest Framework project using a user’s email address or
 mobile number only (herein referred to as an alias).
@@ -49,10 +51,10 @@ Requirements
 Install
 =======
 
-1. Install drfpasswordless
+1. Install drfpasswordless fork
 
    ```
-   pipenv install drfpasswordless
+   pipenv install git+https://github.com/GrbavaCigla/django-rest-framework-passwordless
    ```
 
 2. Add Django Rest Framework’s Token Authentication to your Django Rest
