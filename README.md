@@ -46,6 +46,7 @@ Requirements
 - Django (2.2+)
 - Django Rest Framework + AuthToken (3.10+)
 - Python-Twilio (Optional, for mobile.)
+- Boto3 (Optional, for mobile.)
 
 
 Install
@@ -160,8 +161,8 @@ here. <https://docs.djangoproject.com/en/3.0/topics/email/#console-backend>`__
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ```
 
-Configuring Mobile
-------------------
+Configuring Twilio Mobile
+-------------------------
 
 You’ll need to have the python twilio module installed
 
@@ -169,12 +170,31 @@ You’ll need to have the python twilio module installed
 pipenv install twilio
 ```
 
-and set the ``TWILIO_ACCOUNT_SID`` and ``TWILIO_AUTH_TOKEN`` environment
-variables. These are read from `os.environ`, so make sure you don't put
-them in your settings file accidentally.
+and set the ``PASSWORDLESS_TWILIO_ACCOUNT_SID`` and ``PASSWORDLESS_TWILIO_AUTH_TOKEN`` settings
+variables.
 
 You’ll also need to specify the number you send the token from with the
 ``PASSWORDLESS_MOBILE_NOREPLY_NUMBER`` setting.
+
+Configuring Amazon SNS Mobile
+-----------------------------
+
+You’ll need to have the python boto3 module installed
+
+```bash
+pipenv install boto3
+```
+
+and set the ``PASSWORDLESS_AWS_REGION_NAME``, ``PASSWORDLESS_AWS_ACCESS_KEY_ID`` 
+and ``PASSWORDLESS_AWS_SECRET_ACCESS_KEY`` settings variables. Also make sure the
+callback function is set to aws like this:
+```python
+PASSWORDLESS_AUTH = {
+    ...
+    'PASSWORDLESS_SMS_CALLBACK': 'drfpasswordless.utils.send_aws_sms_with_callback_token',
+}
+```
+
 
 Templates
 =========
@@ -320,12 +340,20 @@ DEFAULTS = {
     'PASSWORDLESS_EMAIL_CALLBACK': 'drfpasswordless.utils.send_email_with_callback_token',
     
     # configurable function for sending sms
-    'PASSWORDLESS_SMS_CALLBACK': 'drfpasswordless.utils.send_sms_with_callback_token',
+    # Set this to 'drfpasswordless.utils.send_aws_sms_with_callback_token' form Amazon SNS
+    'PASSWORDLESS_SMS_CALLBACK': 'drfpasswordless.utils.send_twilio_sms_with_callback_token',
 
     # Token Generation Retry Count
     'PASSWORDLESS_TOKEN_GENERATION_ATTEMPTS': 3
 
+    # Twillio credentials
+    'PASSWORDLESS_TWILIO_ACCOUNT_SID': None,
+    'PASSWORDLESS_TWILIO_AUTH_TOKEN': None,
 
+    # Amazon SNS credentials
+    'PASSWORDLESS_AWS_REGION_NAME': None,
+    'PASSWORDLESS_AWS_ACCESS_KEY_ID': None,
+    'PASSWORDLESS_AWS_SECRET_ACCESS_KEY': None,
 }
 ```
 

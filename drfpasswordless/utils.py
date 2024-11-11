@@ -157,7 +157,7 @@ def send_email_with_callback_token(user, email_token, **kwargs):
         return False
 
 
-def send_sms_with_callback_token(user, mobile_token, **kwargs):
+def send_twilio_sms_with_callback_token(user, mobile_token, **kwargs):
     """
     Sends a SMS to user.mobile via Twilio.
 
@@ -169,9 +169,9 @@ def send_sms_with_callback_token(user, mobile_token, **kwargs):
         # even if you have suppression on– you must provide a number if you have mobile selected.
         if api_settings.PASSWORDLESS_MOBILE_NOREPLY_NUMBER is None:
             return False
-            
+
         return True
-    
+
     base_string = kwargs.get('mobile_message', api_settings.PASSWORDLESS_MOBILE_MESSAGE)
 
     try:
@@ -179,31 +179,93 @@ def send_sms_with_callback_token(user, mobile_token, **kwargs):
             # We need a sending number to send properly
 
             from twilio.rest import Client
-            twilio_client = Client(os.environ['TWILIO_ACCOUNT_SID'], os.environ['TWILIO_AUTH_TOKEN'])
+
+            twilio_client = Client(
+                api_settings.PASSWORDLESS_TWILIO_ACCOUNT_SID,
+                api_settings.PASSWORDLESS_TWILIO_AUTH_TOKEN
+            )
 
             to_number = getattr(user, api_settings.PASSWORDLESS_USER_MOBILE_FIELD_NAME)
-            if to_number.__class__.__name__ == 'PhoneNumber':
+            if to_number.__class__.__name__ == "PhoneNumber":
                 to_number = to_number.__str__()
 
             twilio_client.messages.create(
                 body=base_string % mobile_token.key,
                 to=to_number,
-                from_=api_settings.PASSWORDLESS_MOBILE_NOREPLY_NUMBER
+                from_=api_settings.PASSWORDLESS_MOBILE_NOREPLY_NUMBER,
             )
             return True
         else:
-            logger.debug("Failed to send token sms. Missing PASSWORDLESS_MOBILE_NOREPLY_NUMBER.")
+            logger.debug(
+                "Failed to send token sms. Missing PASSWORDLESS_MOBILE_NOREPLY_NUMBER."
+            )
             return False
     except ImportError:
         logger.debug("Couldn't import Twilio client. Is twilio installed?")
         return False
     except KeyError:
-        logger.debug("Couldn't send SMS."
-                  "Did you set your Twilio account tokens and specify a PASSWORDLESS_MOBILE_NOREPLY_NUMBER?")
+        logger.debug(
+            "Couldn't send SMS."
+            "Did you set your Twilio account tokens and specify a PASSWORDLESS_MOBILE_NOREPLY_NUMBER?"
+        )
     except Exception as e:
-        logger.debug("Failed to send token SMS to user: {}. "
-                  "Possibly no mobile number on user object or the twilio package isn't set up yet. "
-                  "Number entered was {}".format(user.id, getattr(user, api_settings.PASSWORDLESS_USER_MOBILE_FIELD_NAME)))
+        logger.debug(
+            "Failed to send token SMS to user: {}. "
+            "Possibly no mobile number on user object or the twilio package isn't set up yet. "
+            "Number entered was {}".format(
+                user.id,
+                getattr(user, api_settings.PASSWORDLESS_USER_MOBILE_FIELD_NAME)
+            )
+        )
+        logger.debug(e)
+        return False
+
+
+def send_aws_sms_with_callback_token(user, mobile_token, **kwargs):
+    """
+    Sends a SMS to user.mobile via Amazon SNS.
+
+    Passes silently without sending in test environment.
+    """
+    if api_settings.PASSWORDLESS_TEST_SUPPRESSION is True:
+        # we assume success to prevent spamming SMS during testing.
+        return True
+
+    base_string = kwargs.get("mobile_message", api_settings.PASSWORDLESS_MOBILE_MESSAGE)
+
+    try:
+        # We need a sending number to send properly
+
+        import boto3
+
+        aws_client = boto3.client(
+            "sns",
+            region_name=api_settings.PASSWORDLESS_AWS_REGION_NAME,
+            aws_access_key_id=api_settings.PASSWORDLESS_AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=api_settings.PASSWORDLESS_AWS_SECRET_ACCESS_KEY,
+        )
+
+        to_number = getattr(user, api_settings.PASSWORDLESS_USER_MOBILE_FIELD_NAME)
+        if to_number.__class__.__name__ == "PhoneNumber":
+            to_number = to_number.__str__()
+
+        aws_client.publish(
+            PhoneNumber=to_number,
+            Message=base_string % mobile_token.key,
+        )
+        return True
+    except ImportError:
+        logger.debug("Couldn't import AWS client. Is boto3 installed?")
+        return False
+    except Exception as e:
+        logger.debug(
+            "Failed to send token SMS to user: {}. "
+            "Possibly no mobile number on user object or the boto3 package isn't set up yet. "
+            "Number entered was {}".format(
+                user.id,
+                getattr(user, api_settings.PASSWORDLESS_USER_MOBILE_FIELD_NAME),
+            )
+        )
         logger.debug(e)
         return False
 
