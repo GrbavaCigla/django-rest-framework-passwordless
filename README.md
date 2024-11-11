@@ -54,9 +54,9 @@ Install
 
 1. Install drfpasswordless fork
 
-   ```
-   pipenv install git+https://github.com/GrbavaCigla/django-rest-framework-passwordless
-   ```
+```
+pipenv install git+https://github.com/GrbavaCigla/django-rest-framework-passwordless
+```
 
 2. Add Django Rest Framework’s Token Authentication to your Django Rest
    Framework project.
